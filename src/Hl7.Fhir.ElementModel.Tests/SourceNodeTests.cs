@@ -9,14 +9,14 @@
 // To introduce the DSTU2 FHIR specification
 //extern alias dstu2;
 
-using System;
-using Xunit;
 using Hl7.Fhir.ElementModel;
-using Hl7.Fhir.Utility;
-using System.Linq;
+using Hl7.Fhir.Model;
 using Hl7.Fhir.Serialization;
-using System.IO;
 using Hl7.Fhir.Specification;
+using Hl7.Fhir.Utility;
+using System.IO;
+using System.Linq;
+using Xunit;
 
 namespace Hl7.FhirPath.Tests
 {
@@ -29,7 +29,7 @@ namespace Hl7.FhirPath.Tests
             var annotatedNode = SourceNode.Valued("id", "myId1");
             annotatedNode.AddAnnotation("a string annotation");
 
-            patient = SourceNode.Node("Patient", 
+            patient = SourceNode.Node("Patient",
                 SourceNode.Resource("contained", "Observation", SourceNode.Valued("valueBoolean", "true")),
                 SourceNode.Valued("active", "true",
                    annotatedNode,
@@ -115,7 +115,7 @@ namespace Hl7.FhirPath.Tests
             Assert.True(nav.MoveToFirstChild());
             Assert.True(nav.MoveToNext());
             Assert.Equal("active", nav.Name);
-           // Assert.Equal("boolean", nav.Type);
+            // Assert.Equal("boolean", nav.Type);
             Assert.False(nav.MoveToNext());
 
             Assert.Equal("true", nav.Value);
@@ -156,7 +156,7 @@ namespace Hl7.FhirPath.Tests
             var root = SourceNode.Node("TestRoot", child1);
             root.ResourceType = "TestR";
             var annotationTypes = new[] { typeof(string) };
-            var copiedRoot = SourceNode.FromNode(root, recursive: false, annotationsToCopy:annotationTypes);
+            var copiedRoot = SourceNode.FromNode(root, recursive: false, annotationsToCopy: annotationTypes);
 
             Assert.False(copiedRoot.Children().Any());
             Assert.Equal(root.Name, copiedRoot.Name);
@@ -174,7 +174,68 @@ namespace Hl7.FhirPath.Tests
             Assert.Equal(child1.Name, copiedChild.Name);
             Assert.Equal(child1.Location, copiedChild.Location);
             Assert.Equal(child1.Text, copiedChild.Text);
-            Assert.Equal("The first annotation",(copiedChild as IAnnotated).Annotation<string>());
+            Assert.Equal("The first annotation", (copiedChild as IAnnotated).Annotation<string>());
+        }
+
+        [Fact]
+        public void PatientWithExtensionToSourceNode()
+        {
+            var patient = new Patient();
+            patient.AddExtension("http://some.org/fhir/StructureDefinition/myExtension", new FhirString("test"));
+            var typedElement = patient.ToTypedElement();
+            var typedErrors1 = typedElement.VisitAndCatch();
+            Assert.Empty(typedErrors1);
+
+            var sourceNode = typedElement.ToSourceNode();
+            var sourceErrors = sourceNode.VisitAndCatch();
+            Assert.Empty(sourceErrors);
+
+            var typedFromSource = sourceNode.ToTypedElement(new PocoStructureDefinitionSummaryProvider());
+            var typedErrors2 = typedFromSource.VisitAndCatch();
+            Assert.Empty(typedErrors2);
+
+            var pocoFromSource = sourceNode.ToPoco<Patient>();
+            Assert.Equal("test", pocoFromSource.Extension[0].Value.ToString());
+        }
+
+        [Fact]
+        public void PatientWithComplexExtensionToSourceNode()
+        {
+            var patient = new Patient();
+
+            var communication = new Patient.CommunicationComponent
+            {
+                Language = createCodeableConceptWithNLdisplay("http://some.org/fhir/ValueSet/myLanguages", "NL", "Dutch", "Nederlands")
+            };
+            patient.Communication.Add(communication);
+
+            CodeableConcept createCodeableConceptWithNLdisplay(string system, string code, string display, string display_nl)
+            {
+                var codeableConcept = new CodeableConcept(system, code, display, null);
+                if (display != null)
+                {
+                    var languageExtension = new Extension();
+                    languageExtension.AddExtension("lang", new FhirString("nl")); //todo: hier code van maken ipv string
+                    languageExtension.AddExtension("content", new FhirString(display_nl));
+                    codeableConcept.AddExtension("http://hl7.org/fhir/StructureDefinition/translation", languageExtension);
+                }
+                return codeableConcept;
+            }
+
+            var typedElement = patient.ToTypedElement();
+            var typedErrors1 = typedElement.VisitAndCatch();
+            Assert.Empty(typedErrors1);
+
+            var sourceNode = typedElement.ToSourceNode();
+            var sourceErrors = sourceNode.VisitAndCatch();
+            Assert.Empty(sourceErrors);
+
+            var typedFromSource = sourceNode.ToTypedElement(new PocoStructureDefinitionSummaryProvider());
+            var typedErrors2 = typedFromSource.VisitAndCatch();
+            Assert.Empty(typedErrors2); //CK: This one fails.
+
+            var pocoFromSource = sourceNode.ToPoco<Patient>();
+            Assert.Equal("test", pocoFromSource.Extension[0].Value.ToString());
         }
     }
 }
