@@ -441,3 +441,4 @@
 // Hl7.Fhir.Core\Model\Generated\AdverseEvent.cs
 // Hl7.Fhir.Core\Model\Generated\ActivityDefinition.cs
 // Hl7.Fhir.Core\Model\Generated\Account.cs
+// Hl7.Fhir.Core\Model\Generated\CdsContact.cs

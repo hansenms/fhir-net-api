@@ -402,6 +402,12 @@ namespace Hl7.Fhir.Model
         /// MISSING DESCRIPTION<br/>
         /// (system: http://hl7.org/fhir/resource-types)
         /// </summary>
+        [EnumLiteral("CdsContact", "http://hl7.org/fhir/resource-types"), Description("CdsContact")]
+        CdsContact,
+        /// <summary>
+        /// MISSING DESCRIPTION<br/>
+        /// (system: http://hl7.org/fhir/resource-types)
+        /// </summary>
         [EnumLiteral("Account", "http://hl7.org/fhir/resource-types"), Description("Account")]
         Account,
         /// <summary>
